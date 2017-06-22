@@ -69,16 +69,153 @@ Cohen's D is an example of effect size.  Other examples of effect size are:  cor
 
 You will see effect size again and again in results of algorithms that are run in data science.  For instance, in the bootcamp, when you run a regression analysis, you will recognize the t-statistic as an example of effect size.
 
+```python
+import nsfg
+import math
+
+def CohenEffectSize(group1, group2):
+    """Compute Cohen's d.
+
+    group1: Series or NumPy array
+    group2: Series or NumPy array
+
+    returns: float
+    """
+    diff = group1.mean() - group2.mean()
+
+    n1, n2 = len(group1), len(group2)
+    var1 = group1.var()
+    var2 = group2.var()
+
+    pooled_var = (n1 * var1 + n2 * var2) / (n1 + n2)
+    d = diff / math.sqrt(pooled_var)
+    return d
+
+preg = nsfg.ReadFemPreg()
+live = preg[preg.outcome == 1]
+
+firsts = live[live.birthord == 1]
+others = live[live.birthord != 1]
+
+print('Weight')
+print(firsts.totalwgt_lb.mean())
+print(others.totalwgt_lb.mean())
+
+print(CohenEffectSize(firsts.totalwgt_lb, others.totalwgt_lb))
+
+print('\nPregnancy Length')
+print(firsts.prglngth.mean())
+print(others.prglngth.mean())
+
+print(CohenEffectSize(firsts.prglngth, others.prglngth))
+```
+
+```
+Weight
+7.20109443044
+7.32585561497
+-0.0886729270726
+
+Pregnancy Length
+38.6009517335
+38.5229144667
+0.0288790446544
+```
+
+First childs are usually lighter than second childs and the their pregnancies are longer.
+
+The effect size for weight has a larger absolute value than in pregnancy length.
+
 ### Q2. [Think Stats Chapter 3 Exercise 1](statistics/3-1-actual_biased.md) (actual vs. biased)
 This problem presents a robust example of actual vs biased data.  As a data scientist, it will be important to examine not only the data that is available, but also the data that may be missing but highly relevant.  You will see how the absence of this relevant data will bias a dataset, its distribution, and ultimately, its statistical interpretation.
+
+```python
+import nsfg
+import thinkstats2
+import thinkplot
+
+def BiasPmf(pmf, label):
+    new_pmf = pmf.Copy(label=label)
+
+    for x, p in pmf.Items():
+        new_pmf.Mult(x, x)
+
+    new_pmf.Normalize()
+    return new_pmf
+
+
+def UnbiasPmf(pmf, label=None):
+    new_pmf = pmf.Copy(label=label)
+
+    for x, p in pmf.Items():
+        new_pmf[x] *= 1 / x
+
+    new_pmf.Normalize()
+    return new_pmf
+
+resp = nsfg.ReadFemResp()
+pmf = thinkstats2.Pmf(resp.numkdhh, label='numkdhh')
+
+biaspmf = BiasPmf(pmf, label='biased')
+
+thinkplot.Pmfs([pmf, biaspmf])
+thinkplot.show(xlabel='Number of Children', ylabel='pmf')
+
+print('pmf', pmf.Mean())
+
+print('bias', biaspmf.Mean())
+```
+
+```
+pmf 1.02420515504
+bias 2.40367910066
+```
+
+The biased pmf has a higher mean. There is a multiplicative effect on all the households with multiple kids, and the families with no children have no way of reporting.
 
 ### Q3. [Think Stats Chapter 4 Exercise 2](statistics/4-2-random_dist.md) (random distribution)  
 This questions asks you to examine the function that produces random numbers.  Is it really random?  A good way to test that is to examine the pmf and cdf of the list of random numbers and visualize the distribution.  If you're not sure what pmf is, read more about it in Chapter 3.  
 
+```python
+import numpy
+import thinkstats2
+import thinkplot
+
+numbers = numpy.random.random(1000)
+
+pmf = thinkstats2.Pmf(numbers, label='random')
+
+thinkplot.Pmf(pmf, label='random', linewidth=0.1)
+thinkplot.show(xlabel='rv', ylabel='pmf')
+
+cdf = thinkstats2.Cdf(numbers, label='random')
+thinkplot.Cdf(cdf)
+thinkplot.Show(xlabel='rv', ylabel='cdf')
+```
+
+pmf seems to be uniform and have a cdf that follows (it is linear)
+
 ### Q4. [Think Stats Chapter 5 Exercise 1](statistics/5-1-blue_men.md) (normal distribution of blue men)
 This is a classic example of hypothesis testing using the normal distribution.  The effect size used here is the Z-statistic. 
 
+```python
+import scipy.stats
 
+mu = 178
+sigma = 7.7
+dist = scipy.stats.norm(loc=mu, scale=sigma)
+
+low = dist.cdf(177.8)
+high = dist.cdf(185.4)
+
+print(high-low)
+```
+
+```
+0.342094682946
+```
+
+34.2% of men in US fit the Blue Man Group height requirement.
 
 ### Q5. Bayesian (Elvis Presley twin) 
 
@@ -86,14 +223,17 @@ Bayes' Theorem is an important tool in understanding what we really know, given 
 
 Elvis Presley had a twin brother who died at birth.  What is the probability that Elvis was an identical twin? Assume we observe the following probabilities in the population: fraternal twin is 1/125 and identical twin is 1/300.  
 
->> REPLACE THIS TEXT WITH YOUR RESPONSE
+>> 29.4%
 
 ---
 
 ### Q6. Bayesian &amp; Frequentist Comparison  
 How do frequentist and Bayesian statistics compare?
 
->> REPLACE THIS TEXT WITH YOUR RESPONSE
+>> Frequentist has a view that there is some true probability and they try to make inferences to get closer to it.
+
+>> Bayesian start with a prior and take what data there is and keep updating the distribution to fit what new data reveals
+
 
 ---
 
